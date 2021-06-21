@@ -1,0 +1,35 @@
+{
+  "name": "rendertex",
+  "version": "0.0.1",
+  "description": "An API for math rendering",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "tsc-watch --onSuccess \"npm start\"",
+    "build": "tsc",
+    "prepublish": "npm build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HKGx/rendertex.git"
+  },
+  "author": "HKGx",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/HKGx/rendertex/issues"
+  },
+  "homepage": "https://github.com/HKGx/rendertex#readme",
+  "devDependencies": {
+    "@types/node": "^15.12.2",
+    "tsc-watch": "^4.4.0",
+    "typescript": "^4.3.4"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.16.7",
+    "canvas": "^2.8.0",
+    "fastify": "^3.18.0",
+    "mathjax-full": "^3.2.0",
+    "node-cache": "^5.1.2"
+  }
+}
