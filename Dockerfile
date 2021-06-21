@@ -1,6 +1,5 @@
 FROM node:16
-COPY ["tsconfig.json", "package.json", "package-lock.json*", "npm-shrinkwrap.json*", "app/"]
 WORKDIR /app/
+COPY . ./
 RUN npm ci -q
-COPY ./src ./src
 CMD ["npm", "start"]
