@@ -1,22 +1,13 @@
 import fastify from "fastify";
 
 import NodeCache from "node-cache";
-import { Readable } from "stream";
 
 import { isGenerateError } from "./services/LatexService.js";
 import { latexToSvg } from "./services/LatexToSvg.js";
-import { svgToCanvas } from "./services/SvgToCanvas.js";
+import { jpegResize, pngResize, svgToSharp } from "./services/SvgToCanvas.js";
 import { CommonRequest } from "./types/CommonRequest.js";
 import { LatexRequest } from "./types/LatexRequest.js";
-import { SvgToCanvasOptions } from "./types/SvgToCanvasOptions.js";
-
-const streamToBuffer = async (stream: Readable): Promise<Buffer> => {
-  const chunks = [];
-  for await (const chunk of stream) {
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-};
+import { SvgToSharpOptions } from "./types/SvgToSharpOptions.js";
 
 const cache = new NodeCache({
   stdTTL: 36000,
@@ -25,7 +16,22 @@ const cache = new NodeCache({
 
 const server = fastify({
   maxParamLength: CommonRequest.properties.data.maxLength,
+  logger: true,
 });
+
+const getSvgResult = (
+  data: string,
+  nodeCache: NodeCache
+): ReturnType<typeof latexToSvg> => {
+  let svgResult = nodeCache.get("svg" + data) as
+    | ReturnType<typeof latexToSvg>
+    | undefined;
+  if (!svgResult) {
+    svgResult = latexToSvg(data);
+    cache.set("svg" + data, svgResult);
+  }
+  return svgResult;
+};
 
 server.get<{ Params: LatexRequest }>(
   "/latex/svg/:data",
@@ -39,13 +45,7 @@ server.get<{ Params: LatexRequest }>(
 
     const { data } = req.params;
 
-    let svgResult = cache.get("svg" + data) as
-      | ReturnType<typeof latexToSvg>
-      | undefined;
-    if (!svgResult) {
-      svgResult = latexToSvg(data);
-      cache.set("svg" + data, svgResult);
-    }
+    const svgResult = getSvgResult(data, cache);
 
     if (isGenerateError(svgResult)) {
       return { error: svgResult[1] };
@@ -57,12 +57,12 @@ server.get<{ Params: LatexRequest }>(
   }
 );
 
-server.get<{ Params: LatexRequest; Querystring: SvgToCanvasOptions }>(
+server.get<{ Params: LatexRequest; Querystring: SvgToSharpOptions }>(
   "/latex/png/:data",
   {
     schema: {
       params: LatexRequest,
-      querystring: SvgToCanvasOptions,
+      querystring: SvgToSharpOptions,
     },
   },
   async (req, rep) => {
@@ -76,33 +76,29 @@ server.get<{ Params: LatexRequest; Querystring: SvgToCanvasOptions }>(
 
     const { data } = req.params;
 
-    let svgResult = cache.get(req.url) as
-      | ReturnType<typeof latexToSvg>
-      | undefined;
-    if (!svgResult) {
-      svgResult = latexToSvg(data);
-      cache.set(req.url, svgResult);
-    }
+    const svgResult = getSvgResult(data, cache);
+
     if (isGenerateError(svgResult)) {
       return { error: svgResult[1] };
     }
     const [svg] = svgResult;
 
-    const canvas = await svgToCanvas(svg, req.query);
+    const sharp = await svgToSharp(svg, req.query);
+    const resized = pngResize(sharp, req.query);
+    const buffer = await resized.png().toBuffer();
 
     rep.header("Content-Type", "image/png");
-    const buffer = await streamToBuffer(canvas.createPNGStream());
     cache.set(req.url, buffer);
     return buffer;
   }
 );
 
-server.get<{ Params: LatexRequest; Querystring: SvgToCanvasOptions }>(
+server.get<{ Params: LatexRequest; Querystring: SvgToSharpOptions }>(
   "/latex/jpg/:data",
   {
     schema: {
       params: LatexRequest,
-      querystring: SvgToCanvasOptions,
+      querystring: SvgToSharpOptions,
     },
   },
   async (req, rep) => {
@@ -116,42 +112,43 @@ server.get<{ Params: LatexRequest; Querystring: SvgToCanvasOptions }>(
 
     const { data } = req.params;
 
-    let svgResult = cache.get(req.url) as
-      | ReturnType<typeof latexToSvg>
-      | undefined;
-    if (!svgResult) {
-      svgResult = latexToSvg(data);
-      cache.set(req.url, svgResult);
-    }
+    const svgResult = getSvgResult(data, cache);
 
     if (isGenerateError(svgResult)) {
       return { error: svgResult[1] };
     }
     const [svg] = svgResult;
 
-    const canvas = await svgToCanvas(svg, req.query);
+    const sharp = await svgToSharp(svg, req.query);
+    const resized = jpegResize(sharp, req.query);
+    const buffer = await resized.jpeg().toBuffer();
 
     rep.header("Content-Type", "image/jpg");
-    const buffer = await streamToBuffer(canvas.createPNGStream());
     cache.set(req.url, buffer);
     return buffer;
   }
 );
 
 server.addHook("onResponse", (req, rep) => {
-  console.log();
   if (req.url.length < 1024) {
     const decoded = decodeURIComponent(req.url);
-    const trimmed =
-      decoded.length > req.routerPath.length + 20
-        ? decoded.slice(0, req.routerPath.length + 17) + "..."
-        : decoded;
-    console.log(
-      `Request at \`${trimmed}\` took ${rep.getResponseTime().toFixed(2)} ms`
-    );
+    const pathLength = (req.routerPath || "").length;
+    const maxLength = 20;
+    const ellipsis = "...";
+    if (decoded.length > pathLength + maxLength) {
+      const trimmed =
+        decoded.slice(0, pathLength + maxLength - ellipsis.length) + ellipsis;
+      server.log.info(
+        `Request at \`${trimmed}\` took ${rep.getResponseTime().toFixed(2)} ms`
+      );
+    } else {
+      server.log.info(
+        `Request at \`${decoded}\` took \`${rep
+          .getResponseTime()
+          .toFixed(2)}ms\``
+      );
+    }
   }
 });
 
-const address = await server.listen({ port: 8080 });
-
-console.log(`Listening over ${address.replace("[::]", "localhost")}`);
+await server.listen({ port: 8080 });

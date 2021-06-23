@@ -1,32 +1,33 @@
-import canvas from "canvas";
-import { SvgToCanvasOptions } from "../types/SvgToCanvasOptions.js";
+import sharp from "sharp";
+import { SvgToSharpOptions } from "../types/SvgToSharpOptions.js";
 
-const { createCanvas, loadImage } = canvas;
 
-async function svgToCanvas(
-  svg: Buffer,
-  options?: SvgToCanvasOptions
-): Promise<canvas.Canvas> {
-  const { padding = 16, scale = 1, transparent = false } = options || {};
-  const image = await loadImage(svg);
-
-  image.width *= scale;
-  image.height *= scale;
-
-  const canvas = createCanvas(
-    image.width + 2 * padding,
-    image.height + 2 * padding
-  );
-
-  const ctx = canvas.getContext("2d");
-  if (!transparent) {
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+function resize(alpha: number, flatten?: boolean) {
+  return function(image: sharp.Sharp, options?: SvgToSharpOptions) : sharp.Sharp {
+    const { padding = 16, scale = 1} = options || {};
+    const flat = flatten ? {background: "#FFFFFF"} : false;
+    return image.flatten(flat).extend({
+      top: padding * scale,
+      left: padding * scale,
+      bottom: padding * scale,
+      right: padding * scale,
+      background: { alpha, r: 255, g: 255, b: 255 },
+    })
   }
 
-  ctx.drawImage(image, padding, padding);
-
-  return canvas;
 }
 
-export { svgToCanvas };
+const jpegResize = resize(1, true);
+const pngResize = resize(0);
+
+async function svgToSharp(
+  svg: Buffer,
+  options?: SvgToSharpOptions
+): Promise<sharp.Sharp> {
+  const {scale = 1 } = options || {};
+
+  const image = sharp(svg, { density: 72 * scale });
+  return image;
+}
+
+export { svgToSharp, jpegResize, pngResize  };
