@@ -1,17 +1,7 @@
 {
+  "extends": "@tsconfig/node18-strictest-esm/tsconfig.json",
   "compilerOptions": {
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "rootDir": "src",
-    "outDir": "dist",
-    "target": "ES2017",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
-    "strict": true,
-    "strictNullChecks": true,
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "skipLibCheck": true
-    
-  }
+    "ignoreDeprecations": "5.0"
+  },
+  "include": ["src/**/*"]
 }

@@ -1,11 +1,12 @@
-import { LiteElement } from "mathjax-full/js/adaptors/lite/Element.js";
+import type { LiteElement } from "mathjax-full/js/adaptors/lite/Element";
+import type { AbstractInputJax } from "mathjax-full/js/core/InputJax";
+import type { MathDocument } from "mathjax-full/js/core/MathDocument";
+import type { CommonOutputJax } from "mathjax-full/js/output/common/OutputJax";
 import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
-import { AbstractInputJax } from "mathjax-full/js/core/InputJax.js";
-import { MathDocument } from "mathjax-full/js/core/MathDocument.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { mathjax } from "mathjax-full/js/mathjax.js";
-import { CommonOutputJax } from "mathjax-full/js/output/common/OutputJax.js";
-import { ErroringInput } from "./ErroringInput.js";
+
+import type { ErroringInput } from "./ErroringTex.js";
 
 function create<
   T extends AbstractInputJax<unknown, unknown, unknown> & ErroringInput
@@ -19,28 +20,27 @@ function create<
   return document;
 }
 
-type Success = [Buffer, undefined];
+type Success = [string, undefined];
 type Error = [undefined, string];
 
-function isGenerateError(t: [unknown, unknown]): t is Error {
-  return !!t[1];
+function isError(t: [unknown, unknown]): t is Error {
+  const [_, err] = t;
+  return err !== undefined && typeof err === "string";
 }
 
-function generate(doc: MathDocument<any, any, any>) {
-  function inner(data: string): Success | Error {
+export const generate =
+  (doc: MathDocument<any, any, any>) =>
+  (data: string): Success | Error => {
     try {
       const node: LiteElement = doc.convert(data);
       const html = doc.adaptor.innerHTML(node);
-      return [Buffer.from(html), undefined];
+      return [html, undefined];
     } catch (err) {
-      const message = err.message;
-      if (message && typeof message === "string") {
-        return [undefined, message];
+      if (err instanceof Error) {
+        return [undefined, err.message];
       }
       throw err;
     }
-  }
-  return inner;
-}
+  };
 
-export { create, generate, isGenerateError };
+export { create, isError };

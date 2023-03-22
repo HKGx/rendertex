@@ -9,7 +9,7 @@ class ErroringTex
   extends TeX<unknown, unknown, unknown>
   implements ErroringInput
 {
-  formatError(err: TexError): never {
+  override formatError(err: TexError): never {
     throw err;
   }
 }

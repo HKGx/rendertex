@@ -1,15 +1,10 @@
-// interface SvgToCanvasOptions {
-//     scale: number;
-//     padding: number;
-//     transparent: boolean;
-//   }
-import { Static, Type } from "@sinclair/typebox";
+import z from "zod";
 
-const SvgToSharpOptions = Type.Object({
-  scale: Type.Integer({ minimum: 1, maximum: 10, default: 1 }),
-  padding: Type.Integer({ minimum: 0, maximum: 64, default: 16 })
+const SvgToSharpOptions = z.object({
+  scale: z.number().int().min(1).max(10).default(1),
+  padding: z.number().int().min(0).max(64).default(16),
 });
 
-type SvgToSharpOptions = Static<typeof SvgToSharpOptions>;
+type SvgToSharpOptions = z.infer<typeof SvgToSharpOptions>;
 
 export { SvgToSharpOptions };

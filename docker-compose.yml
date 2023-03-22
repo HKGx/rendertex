@@ -1,4 +1,4 @@
-version: "3.4"
+version: "3.6"
 
 services:
   rendertex:
@@ -6,7 +6,16 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    depends_on:
+      - redis
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
     ports:
       - 8090:8080
+  redis: 
+    image: redis:alpine
+    hostname: redis
+    ports:
+      - 6379:6379
