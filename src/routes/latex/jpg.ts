@@ -38,7 +38,8 @@ router.get("/latex/jpg/:data", async (req, res) => {
   const svgResult = latexToSvg(data);
 
   if (isError(svgResult)) {
-    return { error: svgResult[1] };
+    res.sendStatus(500).send({ error: svgResult[1] } as unknown as Buffer);
+    return;
   }
   const [svg] = svgResult;
 

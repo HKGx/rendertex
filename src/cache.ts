@@ -1,6 +1,5 @@
 import { commandOptions, createClient } from "redis";
 import env from "./env.js";
-import { createHash } from "crypto";
 
 const client = createClient({
   url: env.REDIS,
