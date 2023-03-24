@@ -24,7 +24,9 @@ const api = makeApi([
 
 const router = zodiosRouter(api);
 
-router.get("/latex/jpg/:data", async (req, res) => {
+type Handler = Parameters<typeof router.get>[1];
+
+const handler: Handler = async (req, res) => {
   res.header("Cache-Control", "public, max-age=604800, immutable");
 
   const jpg = await getImage(req.url);
@@ -35,7 +37,9 @@ router.get("/latex/jpg/:data", async (req, res) => {
   }
 
   const { data } = req.params;
-  const svgResult = latexToSvg(data);
+  const strippedData = data.replace(/.jpg$/, "");
+
+  const svgResult = latexToSvg(strippedData);
 
   if (isError(svgResult)) {
     res.sendStatus(500).send({ error: svgResult[1] } as unknown as Buffer);
@@ -51,6 +55,8 @@ router.get("/latex/jpg/:data", async (req, res) => {
   await setImage(req.url, buffer);
 
   res.send(buffer);
-});
+};
+
+router.get("/latex/jpg/:data", handler);
 
 export default router;
