@@ -29,6 +29,8 @@ type Handler = Parameters<typeof router.get>[1];
 const handler: Handler = async (req, res) => {
   res.header("Cache-Control", "public, max-age=604800, immutable");
 
+  res.sendFile
+
   const jpg = await getImage(req.url);
   if (jpg) {
     res.header("Content-Type", "image/jpg");
