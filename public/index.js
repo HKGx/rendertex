@@ -33,7 +33,7 @@ const MathField = ({ setValue }) => {
 
 const RenderedMath = ({ value }) => {
   const url = `/latex/jpg/${encodeURIComponent(value)}?scale=5`;
-  return h("img", { src: url });
+  return h("img", { src: url, class: "rendered" });
 };
 
 const Box = () => {

@@ -13,3 +13,7 @@ body {
   flex-direction: column;
   justify-content: center;
 }
+
+.rendered {
+  max-height: 50vh;
+}
